@@ -1,45 +1,16 @@
-const mongoose = require('mongoose');
+const express = require('express');
+const jwt = require('jsonwebtoken');
 
-const userSchema = new mongoose.Schema({
-    fullname:{
-        type:String,
-        required:true
-    },
-    email:{
-        type:String,
-        required:true,
-        unique:true
-    },
-    password:{
-        type:String,
-        required:true
-    },
-    confirmPassword:{
-        type:String,
-        required:true
-    },
-    phonenumber:{
-        type:Number,
-        required:true
-    },
-    address:{
-        type:String,
-        required:true
-    },
-    avatar : Buffer,
-})
+const user = require("../models/user");
 
-// userSchema.pre('save', function (next) {
-//     if (this.isModified('password')) {
-//       bcrypt.hash(this.password, 8, (err, hash) => {
-//         if (err) return next(err);
-  
-//         this.password = hash;
-//         next();
-//       });
-//     }
-//   });
-  
+const router = express.Router();
 
+const {createUser,userLogin,userDetails} = require("../controllers/user");
+const { isAuth } = require('../middleware/auth');
+const {validateUserSignUp,userValidation,validateUserSignIn} = require("../middleware/validation/user");
 
-module.exports = mongoose.model('User',userSchema)
+router.post('/create-user',validateUserSignUp,userValidation,createUser);
+router.post('/userLogin',validateUserSignIn,userValidation,userLogin);
+router.post('/userDetails',userDetails);
+
+module.exports = router;

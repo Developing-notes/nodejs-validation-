@@ -1,119 +1,64 @@
-const express = require('express');
-const { add } = require('nodemon/lib/rules');
-const app = express();
-const User = require('../models/user');
-app.use(express.json());
-const jwt = require('jsonwebtoken');
-require("dotenv").config();
+const {check,validationResult} = require('express-validator');
+const res = require('express/lib/response');
 
-
-exports.createUser = async (req,res) =>{ 
-    const newUser = User();
-    const { fullname, email, password,confirmPassword,phonenumber,address } = req.body;
-     try {
-        const user = await User.findOne({ email });
-        if (user)
-        {
-          return res.json({
-            success: false,
-            message: 'This Email is already in use, try sign-in!!',                        
-          });
+exports.validateUserSignUp = [
+    check('fullname')
+      .trim()
+      .not()
+      .isEmpty()
+      .withMessage('Name is required!')
+      .isString()
+      .withMessage('Must be a valid name!')
+      .isLength({ min: 3, max: 20 })
+      .withMessage('Name must be within 3 to 20 character!'),
+    check('email').normalizeEmail().isEmail().withMessage('Invalid email!'),
+    check('password')
+      .trim()
+      .not()
+      .isEmpty()
+      .withMessage('Password is empty!')
+      .isLength({ min: 8, max: 20 })
+      .withMessage('Password must be 8 to 20 characters long!'), 
+      check('confirmPassword')
+        .trim()
+        .not()
+        .isEmpty()
+        .custom((value, { req }) => {
+        if (value !== req.body.password) {
+            throw new Error('Both password must be same!');
         }
-        else {
-            newUser.fullname = fullname,
-            newUser.email = email,
-            newUser.password = password,
-            newUser.confirmPassword = confirmPassword,
-            newUser.phonenumber = phonenumber,
-            newUser.address = address       
-            newUser.save();
-            res.json({ success: true,msg:"You are successfully register!!",newUser});
-           //res.json(user);
-          }    
-          
-        } catch (error) {
-          console.log('error inside createUser method', error.message);
-          return false;
-        }
-      }
-         
-exports.userLogin = async (req,res) =>{
+        return true;
+        }),
 
-const {email, password } = req.body;
-try {
-const user = await User.findOne({ email });
-if (user)
-{
-    if(user.password == password)
-    {
-    const token = jwt.sign({ userId: user._id }, "alliswell", {
-        expiresIn: '1hr',
-        })
+      check('phonenumber').trim()
+      .not()
+      .isEmpty().withMessage("phonenumber required!!")
+      .isLength({min:10,max:10}).withMessage("Phonenumber must be 10 digit!"),
+      check('address').trim()
+      .not()
+      .isEmpty().withMessage("Address field required!!")
+      .isLength({min:5,max:10}).withMessage("Address field must have atlease 5 character!"),
 
-    return res.json({
-    success: true,
-    message: 'You are successfully login!!',
-    data: user,
-    token: token                        
-    });
-    }
-    else{
-        return res.json({
-            
-            message: 'incorrect password!!',                        
-            });
-    }
+  ];
 
-}
-else{
-return res.json({
-    success: false,
-    message: 'You are not a member, please register!!',                        
-    });
-}            
-} catch (error) {
-    console.log('error inside userLogin method', error.message);
-    return false;
-}
-}
-    
-exports.userDetails = (req,res) =>{
-    if (req.headers && req.headers.authorization) {
-    const token = req.headers.authorization.split(' ')[1];  
-//Authorization: 'Bearer TOKEN'
-try{
-    if(!token)
-    {
-        res.status(200).json({success:false, message: "Error!Token was not provided."});
-    }
-    //Decoding the token
-    const decodedToken = jwt.verify(token,"alliswell" );
-    User.find(function(err, data) {
-        if(err){
-            console.log(err);
-        }
-        else{
-            res.send(data);
-        }
-    });   
-}
-catch(error){
-    if (error.name === 'JsonWebTokenError') {
-        return res.json({ success: false, message: 'unauthorized access!' });
-        }
+  exports.userValidation = (req, res,next) => {
+    const result = validationResult(req).array();
+    if (!result.length) return next();
 
-        if (error.name === 'TokenExpiredError') {
-            return res.json({
-              success: false,
-              message: 'sesson expired try sign in!',
-            });
-          }
-}  
-}    
-}
+    const error = result[0].msg;
+    res.json({ success: false, message: error });
 
+    };
 
-
-
-
-
+    exports.validateUserSignIn = [
+        check('email')
+        .trim()
+        .not()
+        .isEmpty().withMessage('email is required!!')
+        .normalizeEmail().isEmail().withMessage('Invalid email!'),
+        check('password')       
+          .trim()
+          .not()
+          .isEmpty()
+          .withMessage('password is required!'),
+      ];
